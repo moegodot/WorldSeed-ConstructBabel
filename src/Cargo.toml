@@ -1,0 +1,66 @@
+[workspace.dependencies]
+wscb-atlas = { path = "./wscb-atlas" }
+wscb-type = { path = "./wscb-type" }
+
+wscb-sdl = { path = "./wscb-sdl" }
+sdl3-sys = "0.6.0"
+
+ahash = "0.8.12"
+
+thiserror = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["MoeGodot <me@kawayi.moe>"]
+description = "Game"
+documentation = "https://github.com/moegodot/WorldSeed-ConstructBabel"
+repository = "https://github.com/moegodot/WorldSeed-ConstructBabel"
+homepage = "https://github.com/moegodot/WorldSeed-ConstructBabel"
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[workspace]
+members = ["wscb-atlas", "wscb-sdl", "wscb-type"]
+default-members = ["wscb-atlas"]
+resolver = "3"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[workspace.lints.rustdoc]
+missing_docs = "deny"
+broken_intra_doc_links = "deny"
+invalid_codeblock_attributes = "deny"
+invalid_html_tags = "deny"
+invalid_rust_codeblocks = "deny"
+bare_urls = "deny"
+unescaped_backticks = "deny"
+
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+lto = false
+panic = "unwind"
+strip = "none"
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 0
+
+[profile.test]
+inherits = "dev"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+debug = false
+incremental = false
+
+[profile.bench]
+inherits = "release"

@@ -1,0 +1,18 @@
+[package]
+name = "wscb-type"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+repository.workspace = true
+homepage.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ahash.workspace = true
+sdl3-sys.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

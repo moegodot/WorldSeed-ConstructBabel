@@ -3,7 +3,7 @@ wscb-atlas = { path = "./wscb-atlas" }
 wscb-type = { path = "./wscb-type" }
 
 wscb-sdl = { path = "./wscb-sdl" }
-sdl3-sys = "0.6.0"
+sdl3-sys = { version = "0.6.0", features = ["build-from-source"] }
 
 ahash = "0.8.12"
 

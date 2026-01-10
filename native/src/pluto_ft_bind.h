@@ -7,6 +7,7 @@
 #include FT_FREETYPE_H
 #include FT_MODULE_H
 
-#include "staccato.h"
+extern "C" {
+    int bind_plutosvg_freetype(FT_Library library);
+}
 
-STACCATO_API int bind_plutosvg_freetype(FT_Library library);

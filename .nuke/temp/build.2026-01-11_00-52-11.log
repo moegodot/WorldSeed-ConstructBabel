@@ -1,0 +1,69 @@
+V |                      | ArgumentsFromParametersFile.OnBuildCreated (150)
+V |                      | HandleReSharperSurrogateArguments.OnBuildCreated (150)
+V |                      | InjectParameterValues.OnBuildCreated (100)
+V |                      | HandleShellCompletion.OnBuildCreated (75)
+V |                      | GenerateBuildServerConfigurations.OnBuildCreated (50)
+V |                      | InvokeBuildServerConfigurationGeneration.OnBuildCreated (45)
+V |                      | UpdateNotification.OnBuildCreated (10)
+V |                      | UnsetVisualStudioEnvironmentVariables.OnBuildCreated (0)
+V |                      | HandleVisualStudioDebugging.OnBuildCreated (0)
+V |                      | EventInvoker.OnBuildCreated (-3.4028235E+38)
+V |                      | HandlePlanRequests.OnBuildInitialized (10)
+V |                      | HandleHelpRequests.OnBuildInitialized (5)
+V |                      | Telemetry.OnBuildInitialized (0)
+V |                      | Sending BuildStarted telemetry event ...
+V |                      |   build_components         = 
+V |                      |   build_type               = Project
+V |                      |   compile_time             = 3
+V |                      |   config_generators        = 
+V |                      |   host                     = Terminal
+V |                      |   num_custom_components    = 0
+V |                      |   num_custom_extensions    = 0
+V |                      |   num_partitioned_targets  = 0
+V |                      |   num_secrets              = 0
+V |                      |   num_targets              = 15
+V |                      |   os_architecture          = Arm64
+V |                      |   os_platform              = OSX
+V |                      |   repo_branch              = main
+V |                      |   repo_commit              = a1e3c8
+V |                      |   repo_provider            = GitHub
+V |                      |   repo_url                 = 6fdac7
+V |                      |   target_framework         = .NETCoreApp,Version=v10.0
+V |                      |   version_dotnet_sdk       = 10.0.101
+V |                      |   version_nuke_common      = 10.1.0
+V |                      |   version_nuke_global_tool = 10.1.0
+V |                      | InjectNonParameterValues.OnBuildInitialized (-100)
+V |                      | EventInvoker.OnBuildInitialized (-3.4028235E+38)
+V | RestoreGitSubmodules | EventInvoker.OnTargetRunning (-3.4028235E+38)
+I | RestoreGitSubmodules | > /usr/bin/git submodule update --init --recursive
+V | RestoreGitSubmodules | @ /Users/waitgodot/project/WorldSeed-ConstructBabel
+V | RestoreGitSubmodules | Telemetry.OnTargetSucceeded (0)
+V | RestoreGitSubmodules | EventInvoker.OnTargetSucceeded (-3.4028235E+38)
+V | BuildSample          | EventInvoker.OnTargetRunning (-3.4028235E+38)
+V | BuildSample          | Telemetry.OnTargetSucceeded (0)
+V | BuildSample          | EventInvoker.OnTargetSucceeded (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/SDL-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/brotli-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/zlib-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/libpng-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/bzip2-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/freetype-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/plutosvg-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+I |                      | Hit cache lock file /Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug/harfbuzz-installed.lock
+V |                      | EventInvoker.OnTargetSkipped (-3.4028235E+38)
+V | BuildNative          | EventInvoker.OnTargetRunning (-3.4028235E+38)
+I | BuildNative          | Run /opt/homebrew/bin/cmake "-S" "/Users/waitgodot/project/WorldSeed-ConstructBabel/native" "-B" "/Users/waitgodot/project/WorldSeed-ConstructBabel/build-Debug/native" "-G" "Ninja" "-DCMAKE_TOOLCHAIN_FILE=/Users/waitgodot/project/WorldSeed-ConstructBabel/native/toolchain.cmake" "-DCMAKE_BUILD_TYPE=Debug" "-DCMAKE_INSTALL_PREFIX=/Users/waitgodot/project/WorldSeed-ConstructBabel/artifact-Debug/native" "-DSTACCATO_INSTALL_ROOT=/Users/waitgodot/project/WorldSeed-ConstructBabel/install-Debug" "-Wno-dev"
+I | BuildNative          | Run /opt/homebrew/bin/cmake "--build" "." "--config" "Debug"
+I | BuildNative          | Run /opt/homebrew/bin/cmake "--install" "." "--config" "Debug"
+V | BuildNative          | Telemetry.OnTargetSucceeded (0)
+V | BuildNative          | EventInvoker.OnTargetSucceeded (-3.4028235E+38)
+V |                      | UpdateNotification.OnBuildFinished (10)
+V |                      | SerializeBuildServerState.OnBuildFinished (0)
+V |                      | EventInvoker.OnBuildFinished (-3.4028235E+38)

@@ -3,25 +3,25 @@ cmake_minimum_required(VERSION 4.1)
 file(READ "${CMAKE_CURRENT_LIST_DIR}/../version.txt" VERSION_STRING)
 string(STRIP "${VERSION_STRING}" VERSION_STRING)
 
-project(Wscb VERSION "${VERSION_STRING}" LANGUAGES CXX C)
+project(Wscb-Cpp VERSION "${VERSION_STRING}" LANGUAGES CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if (NOT CMAKE_BUILD_TYPE)
+if (NOT DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif ()
 
-if (NOT CMAKE_INSTALL_PREFIX)
+if (NOT DEFINED CMAKE_INSTALL_PREFIX)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../artifact-${CMAKE_BUILD_TYPE}/native")
 endif ()
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(Wscb STATIC 
+add_library(wscb-cpp STATIC 
     "src/pluto_ft_bind.cpp"
 )
 
-set_target_properties(Wscb PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(wscb-cpp PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 find_package(Freetype REQUIRED)
 find_package(harfbuzz REQUIRED)
@@ -34,7 +34,7 @@ find_library(BROTLIENC_LIBRARY NAMES brotlienc REQUIRED)
 find_library(BROTLIDEC_LIBRARY NAMES brotlidec REQUIRED)
 find_library(BROTLICOMMON_LIBRARY NAMES brotlicommon REQUIRED)
 
-target_link_libraries(Wscb PRIVATE
+target_link_libraries(wscb-cpp PRIVATE
     Freetype::Freetype
     SDL3::SDL3
     harfbuzz::harfbuzz
@@ -47,5 +47,5 @@ target_link_libraries(Wscb PRIVATE
     ${BROTLIDEC_LIBRARY}
 )
 
-install(TARGETS Wscb LIBRARY DESTINATION .)
+install(TARGETS wscb-cpp LIBRARY DESTINATION .)
 

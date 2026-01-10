@@ -501,6 +501,29 @@ class Build : NukeBuild
             }
         });
     
+    Target BuildRust => _ => _
+        .DependsOn(UpdateVersionFiles)
+        .DependsOn(BuildNative)
+        .Executes(() =>
+        {
+            string profile;
+
+            if (Configuration == Configuration.Release)
+            {
+                profile = "release";
+            }
+            else if(Configuration == Configuration.Debug)
+            {
+                profile = "dev";
+            }
+            else
+            {
+                profile = Configuration.ToString().ToLowerInvariant();
+            }
+            
+            RunTool("cargo", RustSourcePath, ["build", "--profile", profile, "--workspace", "-Z", "build-std=core,alloc,std,proc_macro,test"]);
+        });
+    
     Target BuildSample => _ => _
         .DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => ShouldBuildSample)
@@ -514,6 +537,8 @@ class Build : NukeBuild
         {
             var cargo = File.ReadAllText(CargoFilePath);
             var version = File.ReadAllText(VersionFile).Trim();
+            
+            Log.Information("Use {Version}", version);
 
             var startMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - START";
             var endMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - END";
@@ -523,9 +548,10 @@ class Build : NukeBuild
 
             var result = cargo.Substring(0, start + startMark.Length) + "\n" + $"version = \"{version}\"" + "\n" + cargo.Substring(end);
             
+            Log.Information("Update {File}", CargoFilePath);
+            
             File.WriteAllText(CargoFilePath,result);
         });
 
-    Target BuildAll => _ => _.DependsOn(BuildNative).DependsOn(BuildSample);
+    Target BuildAll => _ => _.DependsOn(BuildNative).DependsOn(BuildSample).DependsOn(BuildRust);
 }
-

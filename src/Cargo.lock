@@ -200,6 +200,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wscb-text"
+version = "0.1.0"
+dependencies = [
+ "sdl3-sys",
+ "wscb-type",
+]
+
+[[package]]
 name = "wscb-type"
 version = "0.1.0"
 dependencies = [

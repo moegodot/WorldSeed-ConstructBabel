@@ -10,7 +10,9 @@ ahash = "0.8.12"
 thiserror = "2"
 
 [workspace.package]
+# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - START
 version = "0.1.0"
+# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - END
 authors = ["MoeGodot <me@kawayi.moe>"]
 description = "Game"
 documentation = "https://github.com/moegodot/WorldSeed-ConstructBabel"
@@ -20,7 +22,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [workspace]
-members = ["wscb-atlas", "wscb-sdl", "wscb-type"]
+members = ["wscb-atlas", "wscb-sdl", "wscb-text", "wscb-type"]
 default-members = ["wscb-atlas"]
 resolver = "3"
 

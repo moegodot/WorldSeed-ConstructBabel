@@ -1,0 +1,24 @@
+[submodule "library/bzip2"]
+	path = library/bzip2
+	url = https://github.com/libarchive/bzip2
+[submodule "library/libpng"]
+	path = library/libpng
+	url = https://github.com/pnggroup/libpng
+[submodule "library/brotli"]
+	path = library/brotli
+	url = https://github.com/google/brotli
+[submodule "library/zlib-ng"]
+	path = library/zlib
+	url = https://github.com/zlib-ng/zlib-ng
+[submodule "library/SDL"]
+	path = library/SDL
+	url = https://github.com/libsdl-org/SDL
+[submodule "library/plutosvg"]
+	path = library/plutosvg
+	url = https://github.com/sammycage/plutosvg
+[submodule "library/freetype"]
+	path = library/freetype
+	url = https://github.com/freetype/freetype
+[submodule "library/harfbuzz"]
+	path = library/harfbuzz
+	url = https://github.com/harfbuzz/harfbuzz

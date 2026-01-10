@@ -22,3 +22,7 @@ target
 
 .DS_Store
 
+build-*/
+install-*/
+artifact-*/
+

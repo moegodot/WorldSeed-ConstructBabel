@@ -34,8 +34,9 @@ impl AtlasSegment {
                 current_position,
                 current_line_height,
             } => {
-                let surface_height = texture.h.try_into().ok()?;
-                let surface_width = texture.w.try_into().ok()?;
+                let size = texture.size().ok()?;
+                let surface_height = size.height;
+                let surface_width = size.width;
 
                 if request.height > surface_height || request.width > surface_width {
                     return None;
@@ -140,24 +141,18 @@ impl AtlasManager {
             size = size.max_dimension(minimum_size);
         }
 
-        unsafe {
-            let texture = sdl3_sys::render::SDL_CreateTexture(
-                renderer.get_pointer(),
+        let segment = AtlasSegment::Dynamic {
+            texture: renderer.create_texture(
                 self.pixel_format,
                 SDL_TextureAccess::STREAMING,
-                size.width.try_into().unwrap(),
-                size.height.try_into().unwrap(),
-            );
+                size.width,
+                size.height,
+            )?,
+            current_position: Point::new(0, 0),
+            current_line_height: 0,
+        };
 
-            let segment = AtlasSegment::Dynamic {
-                texture: Texture::from_raw(texture)
-                    .ok_or_else(|| SdlError::sdl_err("failed to create surface"))?,
-                current_position: Point::new(0, 0),
-                current_line_height: 0,
-            };
-
-            Ok(segment)
-        }
+        Ok(segment)
     }
 
     pub fn allocate(
@@ -209,53 +204,153 @@ impl AtlasManager {
         source: &Surface,
         source_rect: Option<Rect>,
     ) -> Result<TextureHandle, SdlError> {
-        let src_format = unsafe { (*source.get_pointer()).format };
+        let src_format = source.format();
         if src_format != self.pixel_format {
             return Err(SdlError::sdl_err(
                 "source surface format mismatch with atlas pixel format",
             ));
         }
 
-        unsafe {
-            let source_rect = source_rect.unwrap_or(
-                (
-                    Point::new(0, 0),
-                    Size::new(
-                        (*source.get_pointer()).w.try_into()?,
-                        (*source.get_pointer()).h.try_into()?,
-                    ),
-                )
-                    .into(),
-            );
+        let source_size = source.size()?;
+        let source_rect = source_rect.unwrap_or((Point::new(0, 0), source_size).into());
 
-            let handle = self.allocate(renderer, source_rect.size)?;
+        let handle = self.allocate(renderer, source_rect.size)?;
 
-            let dst_texture = self.get_texture(&handle);
+        let dst_texture = self.get_texture(&handle);
 
-            let src_pixels = (*source.get_pointer()).pixels;
-            let src_pitch: usize = (*source.get_pointer()).pitch.try_into()?;
+        let src_pixels = source.pixels();
+        let src_pitch = source.pitch();
 
-            let guard = dst_texture.lock(handle.rect)?;
+        let guard = dst_texture.lock(handle.rect)?;
 
-            let dst_pixels = guard.pixels;
-            let dst_pitch = guard.pitch;
+        let dst_pixels = guard.pixels;
+        let dst_pitch = guard.pitch;
 
-            copy_pixels(
-                src_pixels as *const u8,
-                source_rect,
-                src_pitch,
-                dst_pixels as *mut u8,
-                Point::new(0, 0), // the `dst_pixel` has been offset by SDL itself
-                dst_pitch,
-                self.pixel_format,
-            )?;
+        copy_pixels(
+            src_pixels,
+            source_rect,
+            src_pitch,
+            dst_pixels,
+            Point::new(0, 0), // the `dst_pixel` has been offset by SDL itself
+            dst_pitch,
+            self.pixel_format,
+        )?;
 
-            Ok(handle)
+        Ok(handle)
+    }
+
+    pub fn allocate_then_copy_surfaces(
+        &mut self,
+        renderer: &mut Renderer,
+        sources: &[Surface],
+    ) -> Vec<Result<TextureHandle, SdlError>> {
+        let mut results: Vec<Result<TextureHandle, SdlError>> = (0..sources.len())
+            .map(|_| Err(SdlError::SdlError("pending".to_string())))
+            .collect();
+        let mut segment_groups: Vec<Vec<(usize, TextureHandle)>> =
+            vec![Vec::new(); self.segments.len()];
+
+        for (i, source) in sources.iter().enumerate() {
+            if source.format() != self.pixel_format {
+                results[i] = Err(SdlError::sdl_err(
+                    "source surface format mismatch with atlas pixel format",
+                ));
+                continue;
+            }
+
+            let source_size = match source.size() {
+                Ok(s) => s,
+                Err(e) => {
+                    results[i] = Err(e);
+                    continue;
+                }
+            };
+
+            match self.allocate(renderer, source_size) {
+                Ok(handle) => {
+                    let segment_idx = (handle.index.get() - 1) as usize;
+                    if segment_idx >= segment_groups.len() {
+                        segment_groups.resize_with(segment_idx + 1, Vec::new);
+                    }
+                    segment_groups[segment_idx].push((i, handle));
+                    results[i] = Ok(handle);
+                }
+                Err(e) => {
+                    results[i] = Err(e);
+                }
+            }
         }
+
+        for (segment_idx, group) in segment_groups.into_iter().enumerate() {
+            if group.is_empty() {
+                continue;
+            }
+
+            let texture = self.get_texture_from_index(segment_idx);
+
+            // Calculate bounding box
+            let mut min_x = PointUnit::MAX;
+            let mut min_y = PointUnit::MAX;
+            let mut max_x = 0;
+            let mut max_y = 0;
+
+            for (_, handle) in &group {
+                min_x = min_x.min(handle.rect.position.x);
+                min_y = min_y.min(handle.rect.position.y);
+                max_x = max_x.max(handle.rect.position.x + handle.rect.size.width);
+                max_y = max_y.max(handle.rect.position.y + handle.rect.size.height);
+            }
+
+            let bbox = Rect::new(min_x, min_y, max_x - min_x, max_y - min_y);
+
+            // Lock once per segment
+            match texture.lock(bbox) {
+                Ok(guard) => {
+                    for (orig_idx, handle) in group {
+                        let source = &sources[orig_idx];
+                        let src_pixels = source.pixels();
+                        let src_pitch = source.pitch();
+
+                        let dst_pixels = guard.pixels;
+                        let dst_pitch = guard.pitch;
+
+                        // Calculate dst_pos relative to bbox
+                        let dst_pos = Point::new(
+                            handle.rect.position.x - bbox.position.x,
+                            handle.rect.position.y - bbox.position.y,
+                        );
+
+                        if let Err(e) = copy_pixels(
+                            src_pixels,
+                            (Point::new(0, 0), handle.rect.size).into(),
+                            src_pitch,
+                            dst_pixels,
+                            dst_pos,
+                            dst_pitch,
+                            self.pixel_format,
+                        ) {
+                            results[orig_idx] = Err(e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // If lock fails, all handles in this group fail
+                    for (orig_idx, _) in group {
+                        results[orig_idx] = Err(e.clone());
+                    }
+                }
+            }
+        }
+
+        results
     }
 
     pub(crate) fn get_texture<'s>(&'s self, handle: &TextureHandle) -> &'s Texture {
-        match self.get_texture_segment(handle) {
+        self.get_texture_from_index((handle.index.get() - 1) as usize)
+    }
+
+    pub(crate) fn get_texture_from_index<'s>(&'s self, idx: usize) -> &'s Texture {
+        match &self.segments[idx] {
             AtlasSegment::Dynamic { texture, .. } => texture,
             AtlasSegment::Static(texture) => texture,
         }

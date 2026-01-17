@@ -8,6 +8,204 @@ use ::wscb_type::error::SdlError;
 use ::wscb_type::graph::{Point, PointUnit, Rect, Size};
 use sdl3_sys::rect::SDL_FRect;
 
+/// Entry for building a static atlas from textures.
+struct AtlasSetEntry<'a> {
+    texture: &'a Texture,
+    src_rect: Option<Rect>,
+}
+
+/// Builder for creating an `AtlasManager` with static textures.
+///
+/// This builder collects multiple textures and their source regions,
+/// then composites them into a single texture when building the `AtlasManager`.
+pub struct AtlasSetBuilder<'a> {
+    entries: Vec<AtlasSetEntry<'a>>,
+    padding: PointUnit,
+    pixel_format: SDL_PixelFormat,
+    default_size: Size,
+}
+
+impl<'a> AtlasSetBuilder<'a> {
+    /// Create a new `AtlasSetBuilder` with the given parameters.
+    pub fn new(padding: PointUnit, default_size: Size, pixel_format: SDL_PixelFormat) -> Self {
+        Self {
+            entries: Vec::new(),
+            padding,
+            pixel_format,
+            default_size,
+        }
+    }
+
+    /// Add a texture to the atlas.
+    ///
+    /// The entire texture will be included in the atlas.
+    pub fn add_texture(&mut self, texture: &'a Texture) -> &mut Self {
+        self.entries.push(AtlasSetEntry {
+            texture,
+            src_rect: None,
+        });
+        self
+    }
+
+    /// Add a texture region to the atlas.
+    ///
+    /// Only the specified region of the texture will be included.
+    pub fn add_texture_rect(&mut self, texture: &'a Texture, src_rect: Rect) -> &mut Self {
+        self.entries.push(AtlasSetEntry {
+            texture,
+            src_rect: Some(src_rect),
+        });
+        self
+    }
+
+    /// Build the `AtlasManager` with a single static texture containing all added textures.
+    ///
+    /// Returns the `AtlasManager` and a vector of `TextureHandle`s corresponding to each added texture.
+    /// The handles are returned in the same order as the textures were added.
+    pub fn build(
+        self,
+        renderer: &mut Renderer,
+    ) -> Result<(AtlasManager, Vec<TextureHandle>), SdlError> {
+        if self.entries.is_empty() {
+            return Ok((
+                AtlasManager {
+                    segments: Vec::new(),
+                    current_index: 0,
+                    padding: self.padding,
+                    default_size: self.default_size,
+                    pixel_format: self.pixel_format,
+                },
+                Vec::new(),
+            ));
+        }
+
+        // First pass: calculate sizes to determine sort order
+        let mut entry_sizes: Vec<Size> = Vec::with_capacity(self.entries.len());
+        for entry in &self.entries {
+            let size = if let Some(rect) = entry.src_rect {
+                rect.size
+            } else {
+                let tex_size = entry.texture.size()?;
+                Size::new(tex_size.width as PointUnit, tex_size.height as PointUnit)
+            };
+            entry_sizes.push(size);
+        }
+
+        // Sort indices by height (descending) for better packing efficiency
+        let mut sorted_indices: Vec<usize> = (0..self.entries.len()).collect();
+        sorted_indices.sort_by(|&a, &b| {
+            let size_a = entry_sizes[a];
+            let size_b = entry_sizes[b];
+            // Primary: height descending, Secondary: width descending
+            size_b
+                .height
+                .cmp(&size_a.height)
+                .then_with(|| size_b.width.cmp(&size_a.width))
+        });
+
+        // Create sorted sizes array for layout calculation
+        let sorted_sizes: Vec<Size> = sorted_indices.iter().map(|&i| entry_sizes[i]).collect();
+
+        // Calculate layout using sorted sizes
+        let (atlas_size, sorted_positions) = self.calculate_layout(&sorted_sizes);
+
+        // Map positions back to original order
+        let mut positions: Vec<Point> = vec![Point::new(0, 0); self.entries.len()];
+        for (sorted_idx, &original_idx) in sorted_indices.iter().enumerate() {
+            positions[original_idx] = sorted_positions[sorted_idx];
+        }
+
+        // Create target texture
+        let target_texture = renderer.create_texture(
+            self.pixel_format,
+            SDL_TextureAccess::TARGET,
+            atlas_size.width as u32,
+            atlas_size.height as u32,
+        )?;
+
+        // Set render target with RAII guard (automatically restores on drop)
+        let _target_guard = renderer.set_render_target(&target_texture)?;
+
+        // Clear the texture
+        renderer.set_draw_color(0, 0, 0, 0)?;
+        renderer.clear()?;
+
+        // Render each source texture to its position (in original order)
+        let mut handles: Vec<TextureHandle> = Vec::with_capacity(self.entries.len());
+        for (i, entry) in self.entries.iter().enumerate() {
+            let pos = positions[i];
+            let size = entry_sizes[i];
+
+            let src_rect: Rect = entry.src_rect.unwrap_or_else(|| {
+                Rect::new(0, 0, size.width, size.height)
+            });
+            let dst_rect = Rect::new(pos.x, pos.y, size.width, size.height);
+
+            renderer.copy_texture(entry.texture, Some(&src_rect), Some(&dst_rect))?;
+
+            handles.push(TextureHandle {
+                index: unsafe { NonZeroU32::new_unchecked(1) },
+                rect: Rect::new(pos.x, pos.y, size.width, size.height),
+            });
+        }
+
+        // Guard drops here, restoring the old render target
+        drop(_target_guard);
+
+        // Create the AtlasManager with the static segment
+        let manager = AtlasManager {
+            segments: vec![AtlasSegment::Static(target_texture)],
+            current_index: 0,
+            padding: self.padding,
+            default_size: self.default_size,
+            pixel_format: self.pixel_format,
+        };
+
+        Ok((manager, handles))
+    }
+
+    /// Calculate layout positions using row-based packing.
+    fn calculate_layout(&self, sizes: &[Size]) -> (Size, Vec<Point>) {
+        let mut positions: Vec<Point> = Vec::with_capacity(sizes.len());
+        let mut current_x: PointUnit = 0;
+        let mut current_y: PointUnit = 0;
+        let mut row_height: PointUnit = 0;
+        let mut max_width: PointUnit = 0;
+
+        let atlas_width = self.default_size.width;
+
+        for size in sizes {
+            let (padded_width, padded_height) = size.outset(self.padding).into();
+
+            // Check if we need to start a new row
+            if current_x.saturating_add(padded_width) > atlas_width && current_x > 0 {
+                current_y = current_y.saturating_add(row_height);
+                current_x = 0;
+                row_height = 0;
+            }
+
+            // Record position (with padding offset)
+            positions.push(Point::new(
+                current_x.saturating_add(self.padding),
+                current_y.saturating_add(self.padding),
+            ));
+
+            // Update tracking
+            current_x = current_x.saturating_add(padded_width);
+            row_height = row_height.max(padded_height);
+            max_width = max_width.max(current_x);
+        }
+
+        // Final height includes the last row
+        let total_height = current_y
+            .saturating_add(row_height)
+            .max(self.default_size.height);
+        let total_width = max_width.max(atlas_width);
+
+        (Size::new(total_width, total_height), positions)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureHandle {
     pub(crate) index: NonZeroU32,

@@ -153,3 +153,9 @@ impl Size {
         Self::new(self.width.max(other.width), self.height.max(other.height))
     }
 }
+
+impl From<Size> for (i32, i32) {
+    fn from(value: Size) -> Self {
+        (value.width, value.height)
+    }
+}

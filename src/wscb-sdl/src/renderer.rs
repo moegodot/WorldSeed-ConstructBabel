@@ -13,6 +13,25 @@ pub struct Renderer {
     pointer: NonNull<sdl3_sys::render::SDL_Renderer>,
 }
 
+/// RAII guard for render target.
+///
+/// Automatically restores the previous render target when dropped.
+pub struct RenderTargetGuard<'r> {
+    renderer: &'r Renderer,
+    old_target: *mut sdl3_sys::render::SDL_Texture,
+}
+
+impl Drop for RenderTargetGuard<'_> {
+    fn drop(&mut self) {
+        unsafe {
+            sdl3_sys::render::SDL_SetRenderTarget(
+                self.renderer.get_pointer(),
+                self.old_target,
+            );
+        }
+    }
+}
+
 impl Renderer {
     pub unsafe fn from_raw(raw: *mut sdl3_sys::render::SDL_Renderer) -> Option<Self> {
         Some(Self {
@@ -22,6 +41,28 @@ impl Renderer {
 
     pub fn get_pointer(&self) -> *mut sdl3_sys::render::SDL_Renderer {
         self.pointer.as_ptr()
+    }
+
+    /// Set the render target to the given texture and return a guard that restores the previous target on drop.
+    pub fn set_render_target<'r>(
+        &'r self,
+        texture: &Texture,
+    ) -> Result<RenderTargetGuard<'r>, SdlError> {
+        unsafe {
+            let old_target = sdl3_sys::render::SDL_GetRenderTarget(self.get_pointer());
+
+            if !sdl3_sys::render::SDL_SetRenderTarget(
+                self.get_pointer(),
+                texture.get_pointer(),
+            ) {
+                return Err(SdlError::sdl_err("failed to set render target"));
+            }
+
+            Ok(RenderTargetGuard {
+                renderer: self,
+                old_target,
+            })
+        }
     }
 
     pub fn create_texture(

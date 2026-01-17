@@ -1,23 +1,49 @@
 use ::std::{ops::Deref, ptr::NonNull};
+#[cfg(target_os = "macos")]
+use std::ffi::c_void;
 
-use ::wscb_type::{
-    error::SdlError,
-    graph::Size,
-};
+use ::wscb_type::{error::SdlError, graph::Size};
+use raw_window_handle::{AppKitWindowHandle, HandleError, RawWindowHandle, WindowHandle};
 
 use crate::renderer::Renderer;
 
-#[repr(transparent)]
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Window {
     pointer: NonNull<sdl3_sys::video::SDL_Window>,
+    #[cfg(target_os = "macos")]
+    ns_view: NonNull<c_void>,
 }
 
 impl Window {
-    pub unsafe fn from_raw(raw: *mut sdl3_sys::video::SDL_Window) -> Option<Self> {
-        Some(Self {
-            pointer: NonNull::new(raw)?,
-        })
+    pub fn new(title: &str, width: i32, height: i32) -> Result<Self, SdlError> {
+        unsafe {
+            cfg_if::cfg_if! {
+                if #[cfg(target_os = "macos")] {
+                    let flags = sdl3_sys::video::SDL_WindowFlags::RESIZABLE | sdl3_sys::video::SDL_WindowFlags::METAL;
+                } else {
+                    let flags = sdl3_sys::video::SDL_WindowFlags::RESIZABLE;
+                }
+            }
+
+            let c_title = std::ffi::CString::new(title)
+                .map_err(|_| SdlError::sdl_err("invalid title string"))?;
+
+            let pointer = sdl3_sys::video::SDL_CreateWindow(c_title.as_ptr(), width, height, flags);
+            let pointer = NonNull::new(pointer)
+                .ok_or_else(|| SdlError::sdl_err("failed to create window"))?;
+
+            cfg_if::cfg_if! {
+                if #[cfg(target_os = "macos")] {
+                    let view = sdl3_sys::metal::SDL_Metal_CreateView(pointer.as_ptr());
+                    let view = NonNull::new(view).ok_or_else(|| SdlError::sdl_err("failed to create NSView"))?;
+
+                    Ok(Self { pointer: pointer, ns_view: view })
+                }
+                else{
+                    unimplemented!()
+                }
+            }
+        }
     }
 
     pub fn get_pointer(&self) -> *mut sdl3_sys::video::SDL_Window {
@@ -44,21 +70,21 @@ impl Window {
         Ok(())
     }
 
-    pub fn title(&self) -> &str {
+    pub fn title(&self) -> String {
         unsafe {
             let title_ptr = sdl3_sys::video::SDL_GetWindowTitle(self.get_pointer());
             if title_ptr.is_null() {
-                return "";
+                return "".to_string();
             }
             std::ffi::CStr::from_ptr(title_ptr)
-                .to_str()
-                .unwrap_or("")
+                .to_string_lossy()
+                .to_string()
         }
     }
 
     pub fn set_title(&self, title: &str) -> Result<(), SdlError> {
-        let c_title = std::ffi::CString::new(title)
-            .map_err(|_| SdlError::sdl_err("invalid title string"))?;
+        let c_title =
+            std::ffi::CString::new(title).map_err(|_| SdlError::sdl_err("invalid title string"))?;
         unsafe {
             if !sdl3_sys::video::SDL_SetWindowTitle(self.get_pointer(), c_title.as_ptr()) {
                 return Err(SdlError::sdl_err("failed to set window title"));
@@ -87,8 +113,10 @@ impl Window {
 
     pub fn create_renderer(&self) -> Result<Renderer, SdlError> {
         unsafe {
-            let renderer = sdl3_sys::render::SDL_CreateRenderer(self.get_pointer(), std::ptr::null());
-            Renderer::from_raw(renderer).ok_or_else(|| SdlError::sdl_err("failed to create renderer"))
+            let renderer =
+                sdl3_sys::render::SDL_CreateRenderer(self.get_pointer(), std::ptr::null());
+            Renderer::from_raw(renderer)
+                .ok_or_else(|| SdlError::sdl_err("failed to create renderer"))
         }
     }
 }
@@ -96,6 +124,12 @@ impl Window {
 impl Drop for Window {
     fn drop(&mut self) {
         unsafe {
+            cfg_if::cfg_if! {
+                if #[cfg(target_os = "macos")] {
+                    sdl3_sys::metal::SDL_Metal_DestroyView(self.ns_view.as_ptr());
+                }
+            }
+
             sdl3_sys::video::SDL_DestroyWindow(self.pointer.as_ptr());
         }
     }
@@ -106,5 +140,23 @@ impl Deref for Window {
 
     fn deref(&self) -> &Self::Target {
         unsafe { &*self.get_pointer() }
+    }
+}
+
+impl raw_window_handle::HasWindowHandle for Window {
+    fn window_handle(&self) -> Result<WindowHandle<'_>, HandleError> {
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                unimplemented!()
+            } else if #[cfg(target_os = "macos")] {
+                unsafe{
+                    Ok(WindowHandle::borrow_raw(
+                        RawWindowHandle::AppKit(AppKitWindowHandle::new(self.ns_view))
+                    ))
+                }
+            } else {
+                unimplemented!()
+            }
+        }
     }
 }

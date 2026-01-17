@@ -1,5 +1,5 @@
 [package]
-name = "wscb-text"
+name = "wscb"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
@@ -10,8 +10,6 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-wscb-type.workspace = true
-sdl3-sys.workspace = true
 
 [lints]
 workspace = true

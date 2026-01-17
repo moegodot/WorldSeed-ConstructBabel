@@ -1,0 +1,31 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 0,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Default Debug Config",
+      "generator": "Ninja",
+      "installDir": "${sourceParentDir}/artifact-Debug/bin",
+      "binaryDir": "${sourceParentDir}/build-Debug/native",
+      "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "toolchainFile": "${sourceDir}/toolchain.cmake"
+    },
+    {
+      "name": "release",
+      "inherits": "debug",
+      "displayName": "Default Release Config",
+      "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+      },
+      "installDir": "${sourceParentDir}/artifact-Release/bin",
+      "binaryDir": "${sourceParentDir}/build-Release/native"
+    }
+  ]
+}

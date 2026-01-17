@@ -7,7 +7,7 @@
 #include FT_FREETYPE_H
 #include FT_MODULE_H
 
-extern "C" {
+extern "C"
+{
     int bind_plutosvg_freetype(FT_Library library);
 }
-

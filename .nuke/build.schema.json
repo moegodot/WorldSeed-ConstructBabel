@@ -32,13 +32,15 @@
         "BuildLibPng",
         "BuildNative",
         "BuildPlutosvg",
+        "BuildRust",
         "BuildSample",
         "BuildSdl",
         "BuildZLib",
         "Clean",
         "RestoreGitSubmodules",
         "RestoreNative",
-        "UpdateVersionFiles"
+        "UpdateVersionFiles",
+        "UpdateVscodeConfig"
       ]
     },
     "Verbosity": {

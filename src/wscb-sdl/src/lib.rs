@@ -5,14 +5,18 @@ use ::wscb_type::{
 };
 
 pub mod graph;
+pub mod renderer;
+pub mod surface;
+pub mod texture;
+pub mod window;
 
 pub fn copy_pixels(
     src: *const u8,
     src_rect: Rect,
-    src_pitch: usize,
+    src_pitch: isize,
     dst: *mut u8,
     dst_pos: Point,
-    dst_pitch: usize,
+    dst_pitch: isize,
     pixel_format: sdl3_sys::pixels::SDL_PixelFormat,
 ) -> Result<(), SdlError> {
     let pixel_byte = match SDL_BITSPERPIXEL(pixel_format) {
@@ -67,8 +71,19 @@ pub fn copy_pixels(
 
     while y_index < src_height {
         unsafe {
-            let src_line = src.add((src_y_start + y_index) * src_pitch);
-            let dst_line = dst.add((dst_y_start + y_index) * dst_pitch);
+            let src_line: isize = (src_y_start + y_index) as isize * src_pitch;
+            let dst_line: isize = (dst_y_start + y_index) as isize * dst_pitch;
+
+            let src_line = if src_line >= 0 {
+                src.add(src_line as usize)
+            } else {
+                src.sub(src_line.abs() as usize)
+            };
+            let dst_line = if dst_line >= 0 {
+                dst.add(dst_line as usize)
+            } else {
+                dst.sub(dst_line.abs() as usize)
+            };
 
             let src_pos = src_line.add(src_x_start * pixel_byte);
             let dst_pos = dst_line.add(dst_x_start * pixel_byte);

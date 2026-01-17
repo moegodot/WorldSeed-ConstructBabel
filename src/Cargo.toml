@@ -1,18 +1,19 @@
 [workspace.dependencies]
-wscb-atlas = { path = "./wscb-atlas" }
 wscb-type = { path = "./wscb-type" }
-
 wscb-sdl = { path = "./wscb-sdl" }
+
 sdl3-sys = { version = "0.6.0", features = ["build-from-source"] }
+wgpu = "28.0.0"
+raw-window-handle = "0.6.2"
 
 ahash = "0.8.12"
 
 thiserror = "2"
 
 [workspace.package]
-# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - START
+# THIS IS UPDATED BY BUILD SCRIPT - DO NOT EDIT MANUALLY - START
 version = "0.1.0"
-# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - END
+# THIS IS UPDATED BY BUILD SCRIPT - DO NOT EDIT MANUALLY - END
 authors = ["MoeGodot <me@kawayi.moe>"]
 description = "Game"
 documentation = "https://github.com/moegodot/WorldSeed-ConstructBabel"
@@ -22,7 +23,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [workspace]
-members = ["wscb-atlas", "wscb-sdl", "wscb-text", "wscb-type"]
+members = ["wscb", "wscb-sdl", "wscb-type", "wscb-atlas", "wscb-text"]
 default-members = ["wscb-atlas"]
 resolver = "3"
 

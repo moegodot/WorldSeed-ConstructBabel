@@ -1,5 +1,3 @@
-use ::std::{num::TryFromIntError, ops::Add};
-
 use ::sdl3_sys::rect::SDL_FRect;
 
 /// The type of pixel unit.
@@ -127,21 +125,25 @@ impl Size {
     }
 
     /// Calculate the area of the rectangle.
+    #[inline]
     #[must_use]
     pub fn area(&self) -> PointUnit {
         self.width * self.height
     }
 
+    #[inline]
     #[must_use]
     pub fn outset(&self, padding: PointUnit) -> Self {
         Self::new(self.width + padding * 2.0, self.height + padding * 2.0)
     }
 
+    #[inline]
     #[must_use]
     pub fn inset(&self, padding: PointUnit) -> Self {
         Self::new(self.width - padding * 2.0, self.height - padding * 2.0)
     }
 
+    #[inline]
     #[must_use]
     pub fn max_dimension(&self, other: Self) -> Self {
         Self::new(self.width.max(other.width), self.height.max(other.height))

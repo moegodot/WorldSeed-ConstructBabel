@@ -1,7 +1,7 @@
 use ::std::num::TryFromIntError;
 
 /// The type of pixel unit.
-pub type PointUnit = u32;
+pub type PointUnit = i32;
 
 /// The rectangle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -59,16 +59,14 @@ impl TryFrom<sdl3_sys::rect::SDL_Rect> for Rect {
     }
 }
 
-impl TryFrom<Rect> for sdl3_sys::rect::SDL_Rect {
-    type Error = TryFromIntError;
-
-    fn try_from(value: Rect) -> Result<Self, Self::Error> {
-        Ok(sdl3_sys::rect::SDL_Rect {
-            x: value.position.x.try_into()?,
-            y: value.position.y.try_into()?,
-            w: value.size.width.try_into()?,
-            h: value.size.height.try_into()?,
-        })
+impl From<Rect> for sdl3_sys::rect::SDL_Rect {
+    fn from(value: Rect) -> Self {
+        sdl3_sys::rect::SDL_Rect {
+            x: value.position.x,
+            y: value.position.y,
+            w: value.size.width,
+            h: value.size.height,
+        }
     }
 }
 
@@ -86,8 +84,8 @@ impl From<Rect> for sdl3_sys::rect::SDL_FRect {
 impl From<sdl3_sys::rect::SDL_FRect> for Rect {
     fn from(value: sdl3_sys::rect::SDL_FRect) -> Self {
         Self {
-            position: Point::new(value.x as PointUnit, value.y as PointUnit),
-            size: Size::new(value.w as PointUnit, value.h as PointUnit),
+            position: Point::new(value.x as i32, value.y as i32),
+            size: Size::new(value.w as i32, value.h as i32),
         }
     }
 }

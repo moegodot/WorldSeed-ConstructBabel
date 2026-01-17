@@ -35,8 +35,8 @@ impl AtlasSegment {
                 current_line_height,
             } => {
                 let size = texture.size().ok()?;
-                let surface_height = size.height;
-                let surface_width = size.width;
+                let surface_height = size.height as i32;
+                let surface_width = size.width as i32;
 
                 if request.height > surface_height || request.width > surface_width {
                     return None;
@@ -145,8 +145,8 @@ impl AtlasManager {
             texture: renderer.create_texture(
                 self.pixel_format,
                 SDL_TextureAccess::STREAMING,
-                size.width,
-                size.height,
+                size.width as u32,
+                size.height as u32,
             )?,
             current_position: Point::new(0, 0),
             current_line_height: 0,
@@ -229,10 +229,10 @@ impl AtlasManager {
         copy_pixels(
             src_pixels,
             source_rect,
-            src_pitch,
+            src_pitch as isize,
             dst_pixels,
             Point::new(0, 0), // the `dst_pixel` has been offset by SDL itself
-            dst_pitch,
+            dst_pitch as isize,
             self.pixel_format,
         )?;
 
@@ -323,10 +323,10 @@ impl AtlasManager {
                         if let Err(e) = copy_pixels(
                             src_pixels,
                             (Point::new(0, 0), handle.rect.size).into(),
-                            src_pitch,
+                            src_pitch as isize,
                             dst_pixels,
                             dst_pos,
-                            dst_pitch,
+                            dst_pitch as isize,
                             self.pixel_format,
                         ) {
                             results[orig_idx] = Err(e);

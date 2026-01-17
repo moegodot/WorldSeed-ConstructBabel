@@ -47,5 +47,4 @@ target_link_libraries(wscb-cpp PRIVATE
     ${BROTLIDEC_LIBRARY}
 )
 
-install(TARGETS wscb-cpp LIBRARY DESTINATION .)
-
+install(TARGETS wscb-cpp LIBRARY DESTINATION . RUNTIME DESTINATION . ARCHIVE DESTINATION .)

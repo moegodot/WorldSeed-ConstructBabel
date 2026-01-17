@@ -1,0 +1,46 @@
+# Handle line endings automatically for files detected as text
+# and force LF (Unix-style) for cross-platform consistency.
+* text=auto eol=lf
+
+# --- Source Code ---
+*.cs     text diff=csharp
+*.rs     text
+*.sh     text eol=lf
+*.bat    text eol=crlf
+*.py     text
+
+# --- Data & Config Files ---
+*.json   text
+*.toml   text
+*.yaml   text
+*.yml    text
+*.xml    text
+*.md     text
+
+# --- Binary Files (Game Assets) ---
+# Mark as binary to prevent line ending conversion and diffing
+*.jxl    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.tga    binary
+*.dds    binary
+*.ico    binary
+
+# --- 3D & Audio Assets ---
+*.fbx    binary
+*.obj    binary
+*.max    binary
+*.blend  binary
+*.wav    binary
+*.mp3    binary
+*.ogg    binary
+
+# --- Compiled / Executable Files ---
+*.dll    binary
+*.exe    binary
+*.so     binary
+*.lib    binary
+*.pdb    binary

@@ -1,0 +1,61 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Global settings for all files
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# C# files
+[*.cs]
+# Standard C# indentation
+indent_size = 4
+# Newline settings (Standard for C#)
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+# Namespace settings
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# Rust files
+[*.rs]
+# Rust standard style is 4 spaces
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+
+# JSON and YAML (common for game configs)
+[*.{json,yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Web-related or Build scripts (if any)
+[*.{js,ts,html,css}]
+indent_size = 2
+
+# Binary and Image resources (Prevent corruption)
+# Common game formats and your mentioned JXL
+[*.{jxl,png,jpg,jpeg,gif,webp,tga,dds,ico,wav,mp3,ogg,fbx,obj,mat,prefab,unity,asset}]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# Windows Batch files
+[*.bat]
+end_of_line = crlf
+
+# Makefiles and files requiring tabs
+[{Makefile,*.mk}]
+indent_style = tab

@@ -12,6 +12,7 @@ using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.Git;
 using Nuke.Common.Utilities.Collections;
+using System.Text.Json;
 using Serilog;
 
 class Build : NukeBuild
@@ -30,9 +31,9 @@ class Build : NukeBuild
     }
 
     public static AbsolutePath ExternalLibraryPath => RootDirectory / "library";
-    
+
     public static AbsolutePath NativePath => RootDirectory / "native";
-    
+
     [Parameter("Configuration to build - Default is 'Debug' (standalone project) or 'Release' (as a git submodule)")]
     readonly Configuration Configuration = IsStandardAlongProject() ? Configuration.Debug : Configuration.Release;
 
@@ -41,40 +42,38 @@ class Build : NukeBuild
 
     [Parameter("Use cmake from this path.")]
     readonly string CMake = "cmake";
-    
+
     [Parameter("Use clang from this path." +
                "Note: this will find more tools like clang++,lld etc. in the directory containing the clang.")]
     readonly string Clang = "clang";
-    
+
     [Parameter("Use uv from this path.")]
     readonly string Uv = "uv";
-    
+
     [Parameter("Prefer using tool that contains this string in its path when multiple tools are found in PATH.")]
     readonly string PreferTool = "homebrew";
-    
+
     AbsolutePath ExternalLibraryBuildPath => RootDirectory / $"build-{Configuration}";
-    
-    AbsolutePath NativeBuildPath => ExternalLibraryBuildPath / "native";
-    
+
     AbsolutePath ExternalLibraryInstallPath => RootDirectory / $"install-{Configuration}";
-    
+
     AbsolutePath ArtifactPath => RootDirectory / $"artifact-{Configuration}";
-    
-    AbsolutePath NativeInstallPath => ArtifactPath / "native";
-    
+
+    AbsolutePath NativeInstallPath => ArtifactPath / "bin";
+
     AbsolutePath ScriptPath => RootDirectory / "script";
-    
+
     AbsolutePath RustSourcePath => RootDirectory / "src";
-    
+
     AbsolutePath CargoFilePath => RustSourcePath / "Cargo.toml";
 
     AbsolutePath VersionFile => RootDirectory / "version.txt";
-    
+
     Target RestoreGitSubmodules => _ => _.Executes(() =>
     {
         GitTasks.Git("submodule update --init --recursive");
     });
-    
+
     Target RestoreNative => _ => _.DependsOn(RestoreGitSubmodules);
 
     private static List<string> Which(string name, string preferred = "homebrew")
@@ -117,11 +116,11 @@ class Build : NukeBuild
                 }
             }
         }
-        
+
         // find homebrew version
         List<string> prefers = [];
         List<string> others = [];
-        
+
         if (preferred != string.Empty)
         {
             foreach (var result in results)
@@ -160,7 +159,7 @@ class Build : NukeBuild
         {
             info.ArgumentList.Add(arg);
         }
-        
+
         env?.Invoke(info.Environment);
 
         var proc = Process.Start(info);
@@ -178,7 +177,7 @@ class Build : NukeBuild
     private void RunUv(string pwd, params string[] args)
     {
         var uv = Which(Uv,PreferTool).First();
-        
+
         var clang = Which(Clang,PreferTool).First();
         var clangPlusPlus = Which(string.IsNullOrEmpty(Path.GetDirectoryName(clang)) ? "clang++" : $"{Path.GetDirectoryName(clang)}/clang++",PreferTool).First();
         var ar = Which(string.IsNullOrEmpty(Path.GetDirectoryName(clang)) ? "llvm-ar" : $"{Path.GetDirectoryName(clang)}/llvm-ar",PreferTool).First();
@@ -187,13 +186,13 @@ class Build : NukeBuild
                 string.IsNullOrEmpty(Path.GetDirectoryName(clang))
                     ? "llvm-ranlib"
                     : $"{Path.GetDirectoryName(clang)}/llvm-ranlib", PreferTool).First();
-        
+
         Log.Information("Using uv: {Uv}", uv);
         Log.Information("Using clang: {Clang}", clang);
         Log.Information("Using clang++: {ClangPlusPlus}", clangPlusPlus);
         Log.Information("Using ar: {Ar}", ar);
         Log.Information("Using ranlib: {Ranlib}", ranlib);
-        
+
         RunTool(uv ?? "uv", pwd, args, dictionary =>
         {
             dictionary["CC"] = clang;
@@ -202,14 +201,14 @@ class Build : NukeBuild
             dictionary["RANLIB"] = ranlib;
         });
     }
-    
+
     private void RunCMake(string pwd, params string[] args)
     {
         var cmake = Which(CMake,PreferTool).First();
         Log.Information("Run {CMake} \"{Arguments}\"", cmake, string.Join("\" \"", args));
         RunTool(cmake ?? "cmake", pwd, args);
     }
-    
+
     private AbsolutePath GetSourcePathOf(string lib)
     {
         if(lib == "native")
@@ -221,13 +220,9 @@ class Build : NukeBuild
 
     private AbsolutePath GetBuildPath(string lib)
     {
-        if (lib == "native")
-        {
-            return NativeBuildPath;
-        }
         return ExternalLibraryBuildPath / lib;
     }
-    
+
     private AbsolutePath GetInstallPathOf(string lib)
     {
         if (lib == "native")
@@ -286,7 +281,7 @@ class Build : NukeBuild
 
         return true;
     }
-    
+
     private void BuildMeson(string lib, params string[] options)
     {
         var src = GetSourcePathOf(lib);
@@ -313,7 +308,7 @@ class Build : NukeBuild
 
         File.Create(lockFile).Close();
     }
-    
+
     Target BuildHarfbuzz => _ => _.DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => !HitCache("harfbuzz"))
         .Executes(() =>
@@ -337,7 +332,7 @@ class Build : NukeBuild
                 "-D", "b_staticpic=true"
             );
         });
-    
+
     Target BuildPlutosvg => _ => _.DependsOn(RestoreNative)
         .DependsOn(BuildFreeType)
         .OnlyWhenDynamic(() => !HitCache("plutosvg"))
@@ -348,7 +343,7 @@ class Build : NukeBuild
                 "-DPLUTOSVG_ENABLE_FREETYPE=ON"]
             );
         });
-    
+
     Target BuildZLib => _ => _.DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => !HitCache("zlib"))
         .Executes(() =>
@@ -363,13 +358,13 @@ class Build : NukeBuild
                 "-DWITH_NATIVE_INSTRUCTIONS=OFF"]
             );
         });
-    
+
     Target BuildBZip2 => _ => _.DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => !HitCache("bzip2"))
         .Executes(() =>
         {
             var suffix = Platform.Win ? "lib" : "a";
-            
+
             BuildCMake("bzip2", [
                 "-DENABLE_WERROR=OFF",
                 "-DENABLE_APP=OFF",
@@ -389,7 +384,7 @@ class Build : NukeBuild
                 );
             }
         });
-    
+
     Target BuildLibPng => _ => _.DependsOn(RestoreNative)
         .DependsOn(BuildZLib)
         .OnlyWhenDynamic(() => !HitCache("libpng"))
@@ -408,7 +403,7 @@ class Build : NukeBuild
                 "-DPNG_STATIC=ON"]
             );
         });
-    
+
     Target BuildBrotli => _ => _.DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => !HitCache("brotli"))
         .Executes(() =>
@@ -419,7 +414,7 @@ class Build : NukeBuild
                 "-DBUILD_STATIC_LIBS=ON"]
             );
         });
-    
+
     Target BuildFreeType => _ => _.DependsOn(RestoreNative)
         .DependsOn(BuildLibPng)
         .DependsOn(BuildZLib)
@@ -429,7 +424,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             var suffix = Platform.Win ? "lib" : "a";
-            
+
             BuildCMake("freetype",[
                 "-DFT_REQUIRE_ZLIB=ON",
                 "-DFT_REQUIRE_BZIP2=ON",
@@ -450,7 +445,7 @@ class Build : NukeBuild
                 "-DBUILD_STATIC_LIBS=ON"]
             );
         });
-    
+
     Target BuildSdl => _ => _.DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => !HitCache("SDL"))
         .Executes(() =>
@@ -475,7 +470,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             BuildCMake("native",[]);
-            
+
             // copy SDL3
             // this should be the only dynamic library we used
             // other dynamic libraries are system libraries
@@ -495,12 +490,9 @@ class Build : NukeBuild
                 Directory.Delete(ExternalLibraryBuildPath, true);
             }
 
-            if (Directory.Exists(NativeBuildPath))
-            {
-                Directory.Delete(NativeBuildPath, true);
-            }
+            RunTool("cargo", RustSourcePath, ["clean"]);
         });
-    
+
     Target BuildRust => _ => _
         .DependsOn(UpdateVersionFiles)
         .DependsOn(BuildNative)
@@ -520,16 +512,16 @@ class Build : NukeBuild
             {
                 profile = Configuration.ToString().ToLowerInvariant();
             }
-            
+
             RunTool("cargo", RustSourcePath, ["build", "--profile", profile, "--workspace", "-Z", "build-std=core,alloc,std,proc_macro,test"]);
         });
-    
+
     Target BuildSample => _ => _
         .DependsOn(RestoreNative)
         .OnlyWhenDynamic(() => ShouldBuildSample)
         .Executes(() =>
         {
-            
+
         });
 
     Target UpdateVersionFiles => _ => _
@@ -537,21 +529,72 @@ class Build : NukeBuild
         {
             var cargo = File.ReadAllText(CargoFilePath);
             var version = File.ReadAllText(VersionFile).Trim();
-            
+
             Log.Information("Use {Version}", version);
 
-            var startMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - START";
-            var endMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT MODIFY MANUALLY - END";
-            
+            var startMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT EDIT MANUALLY - START";
+            var endMark = "# THIS IS UPDATED BY BUILD SCRIPT - DO NOT EDIT MANUALLY - END";
+
             var start =  cargo.IndexOf(startMark,StringComparison.Ordinal);
             var end = cargo.IndexOf(endMark, StringComparison.Ordinal);
 
             var result = cargo.Substring(0, start + startMark.Length) + "\n" + $"version = \"{version}\"" + "\n" + cargo.Substring(end);
-            
+
             Log.Information("Update {File}", CargoFilePath);
-            
+
             File.WriteAllText(CargoFilePath,result);
         });
+
+
+    /// Add IDE support for visual studio code
+    Target UpdateVscodeConfig => _ => _.Executes(()=>{
+        var config = RootDirectory / ".vscode" / "settings.json";
+        var vscodeDir = RootDirectory / ".vscode";
+
+        // ensure .vscode directory exists
+        if (!Directory.Exists(vscodeDir))
+        {
+            Directory.CreateDirectory(vscodeDir);
+        }
+
+        // read existing config or create new
+        Dictionary<string, object> settings;
+
+        if (!File.Exists(config))
+        {
+            settings = new Dictionary<string, object>();
+        }
+        else
+        {
+            var jsonText = File.ReadAllText(config);
+            settings = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonText,
+                    new JsonSerializerOptions(){
+                        AllowTrailingCommas = true,
+                        ReadCommentHandling = JsonCommentHandling.Skip
+                    })
+                    ?? new Dictionary<string, object>();
+        }
+
+        // add or update values:
+        // `cmake.ignoreCMakeListsMissing` to false
+        settings["cmake.ignoreCMakeListsMissing"] = false;
+
+        // `cmake.sourceDirectory` to NativePath
+        settings["cmake.sourceDirectory"] = NativePath.ToString();
+
+        // `cmake.useCMakePresets` to always
+        settings["cmake.useCMakePresets"] = "always";
+
+        // write to file with pretty formatting
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
+        var jsonOutput = JsonSerializer.Serialize(settings, options);
+        File.WriteAllText(config, jsonOutput);
+
+        Log.Information("Updated VSCode configuration: {Config}", config);
+    });
 
     Target BuildAll => _ => _.DependsOn(BuildNative).DependsOn(BuildSample).DependsOn(BuildRust);
 }
